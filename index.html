@@ -8,8 +8,9 @@
         body { 
             margin: 0; 
             font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
+            background-color: #ffffff; /* Change to white */
         }
+
         canvas { 
             display: block; 
             position: absolute; 
@@ -23,6 +24,8 @@
             z-index: 1; 
             pointer-events: none; 
         }
+
+
         #controls { 
             position: fixed; 
             top: 10px; 
@@ -101,7 +104,9 @@
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
-
+        // Set the scene background color
+        scene.background = new THREE.Color(0x535353); // White background
+       
         // Create an overlay canvas for drawing
         const drawingCanvas = document.getElementById('drawing');
         const drawingCtx = drawingCanvas.getContext('2d');
@@ -179,7 +184,7 @@
 
         // Load the 3D model
         const loader = new GLTFLoader();
-        loader.load('model.glb', (gltf) => {
+        loader.load('model3.glb', (gltf) => {
             const model = gltf.scene;
             scene.add(model);
             model.position.set(0, 0, 0); // Adjust position if needed
