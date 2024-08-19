@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Viewer with Drawing</title>
+    <style>
+        body { 
+            margin: 0; 
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        canvas { 
+            display: block; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+        }
+        #overlay { 
+            pointer-events: none; 
+        }
+        #drawing { 
+            z-index: 1; 
+            pointer-events: none; 
+        }
+        #controls { 
+            position: fixed; 
+            top: 10px; 
+            left: 10px; 
+            z-index: 2; 
+            background: white; 
+            padding: 15px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button { 
+            background-color: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 15px; 
+            margin: 5px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 16px; 
+        }
+        button:hover { 
+            background-color: #0056b3; 
+        }
+        label { 
+            display: block; 
+            margin: 5px 0 2px; 
+            font-size: 14px; 
+        }
+        input[type="color"] {
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            height: 30px;
+        }
+        input[type="range"] {
+            width: 100px;
+        }
+        #lineWidthValue {
+            font-size: 14px;
+            margin-left: 5px;
+            display: inline-block;
+            width: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <button id="drawBtn">Draw</button>
+        <button id="rotateBtn">Rotate</button>
+        <br>
+        <label for="colorPicker">Color:</label>
+        <input type="color" id="colorPicker" value="#000000">
+        <br>
+        <label for="lineWidth">Size:</label>
+        <input type="range" id="lineWidth" min="1" max="10" value="2">
+        <span id="lineWidthValue">2</span>
+    </div>
+    <canvas id="drawing"></canvas>
+    <canvas id="overlay"></canvas>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.module.js",
+                "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+        // Create the scene
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Create an overlay canvas for drawing
+        const drawingCanvas = document.getElementById('drawing');
+        const drawingCtx = drawingCanvas.getContext('2d');
+        drawingCanvas.width = window.innerWidth;
+        drawingCanvas.height = window.innerHeight;
+
+        // Drawing variables
+        let drawing = false;
+        let drawingMode = false;
+        let lineColor = '#000000';
+        let lineWidth = 2;
+
+        // Button elements
+        const drawBtn = document.getElementById('drawBtn');
+        const rotateBtn = document.getElementById('rotateBtn');
+        const colorPicker = document.getElementById('colorPicker');
+        const lineWidthInput = document.getElementById('lineWidth');
+        const lineWidthValue = document.getElementById('lineWidthValue');
+
+        // Update line width display
+        lineWidthInput.addEventListener('input', () => {
+            lineWidth = lineWidthInput.value;
+            lineWidthValue.textContent = lineWidth;
+        });
+
+        // Update line color
+        colorPicker.addEventListener('input', () => {
+            lineColor = colorPicker.value;
+        });
+
+        // Clear the drawing canvas
+        function clearDrawing() {
+            drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        }
+
+        // Toggle drawing mode
+        drawBtn.addEventListener('click', () => {
+            drawingMode = true;
+            drawingCanvas.style.zIndex = '1';
+            drawingCanvas.style.pointerEvents = 'auto'; // Enable drawing events
+            clearDrawing(); // Clear drawing when enabling draw mode
+        });
+
+        // Toggle rotation mode
+        rotateBtn.addEventListener('click', () => {
+            drawingMode = false;
+            drawingCanvas.style.zIndex = '-1';
+            drawingCanvas.style.pointerEvents = 'none'; // Disable drawing events
+            clearDrawing(); // Clear drawing when enabling rotate mode
+        });
+
+        // Start drawing
+        drawingCanvas.addEventListener('mousedown', (e) => {
+            if (drawingMode) {
+                drawing = true;
+                drawingCtx.beginPath();
+                drawingCtx.moveTo(e.clientX, e.clientY);
+                drawingCtx.strokeStyle = lineColor;
+                drawingCtx.lineWidth = lineWidth;
+            }
+        });
+
+        // Draw on the canvas
+        drawingCanvas.addEventListener('mousemove', (e) => {
+            if (drawing && drawingMode) {
+                drawingCtx.lineTo(e.clientX, e.clientY);
+                drawingCtx.stroke();
+            }
+        });
+
+        // Stop drawing
+        drawingCanvas.addEventListener('mouseup', () => {
+            drawing = false;
+        });
+
+        // Load the 3D model
+        const loader = new GLTFLoader();
+        loader.load('model.glb', (gltf) => {
+            const model = gltf.scene;
+            scene.add(model);
+            model.position.set(0, 0, 0); // Adjust position if needed
+            model.scale.set(1, 1, 1); // Adjust scale if needed
+        }, undefined, (error) => {
+            console.error('An error happened while loading the model:', error);
+        });
+
+        // Add basic lighting
+        const light = new THREE.AmbientLight(0xffffff); // Soft white light
+        scene.add(light);
+
+        // Set camera position
+        camera.position.z = 5;
+
+        // Add OrbitControls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.25;
+        controls.enableZoom = true;
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            if (!drawingMode) {
+                controls.update(); // Update controls if not in drawing mode
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            drawingCanvas.width = window.innerWidth;
+            drawingCanvas.height = window.innerHeight;
+            document.getElementById('overlay').width = window.innerWidth;
+            document.getElementById('overlay').height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
